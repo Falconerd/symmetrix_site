@@ -292,7 +292,9 @@ function useMetamask() {
         setAccounts(accounts);
         setSigner(signer);
 
-        updateProtocolData()
+        if (signer?.provider?.provider?.chainId == "0xfa2") {
+            updateProtocolData()
+        }
     }
 
     async function getAccounts() {
