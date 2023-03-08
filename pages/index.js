@@ -81,7 +81,6 @@ function useMetamask() {
     }
 
     async function approve(farm, lp) {
-        console.log("APPROVE", farm, lp)
         const provider = setupProvider()
         const signer = provider.getSigner()
         const contract = new ethers.Contract(lp, lpAbi, provider)
@@ -134,7 +133,7 @@ function useMetamask() {
     }
 
     async function updateProtocolData(provider) {
-        const contractCore = new ethers.Contract("0x38F835092e7AdBf925A3e70035ea832d5D709A88", coreAbi, provider)
+        const contractCore = new ethers.Contract("0xE9D4fb18527f008d135d26808f07Ae22DCac777E", coreAbi, provider)
 
         const [farm0, farm1, farm2, farm3, houseToken, stakedToken] = await Promise.all([
             await contractCore.activeFarms(0),
@@ -177,7 +176,13 @@ function useMetamask() {
 
         console.log(total)
 
-        setDeltas(tvls.map(x => toSignedString(((x.div(_1e18).toNumber() / total) * 100 - 25).toFixed(2))))
+        setDeltas(tvls.map(x => {
+            if (x.gt(_1e18)) {
+                return toSignedString(((x.div(_1e18).toNumber() / total) * 100 - 25).toFixed(2))
+            } else {
+                return (0).toFixed(2)
+            }
+        }))
 
         const fetchedLpTokens = await Promise.all([
             await contractFarm0.stake(),
@@ -519,6 +524,12 @@ function Row({ variant, balance, balanceRaw, address, lpTokenAddress, tvl, delta
         farmBalance = farmBalance.div(_1e18).toString()
     }
 
+    const needsApproval = approval.lt(balanceRaw) || approval.eq(0)
+
+    function handleApprove() {
+        approve(address, lpTokenAddress);
+    }
+
     function handleDeposit() {
         deposit(address, depositAmount);
         setDepositAmount("")
@@ -547,7 +558,12 @@ function Row({ variant, balance, balanceRaw, address, lpTokenAddress, tvl, delta
             <div className="pr-4 flex gap-4">
                 <div className="flex flex-col">
                     <input className={"shadow-md w-24 text-sm rounded-full text-white p-1 bg-black " + css.input} placeholder={"Bal: " + balance} value={depositAmount} onChange={event => setDepositAmount(event.target.value)} />
-                    <button className={"shadow-md w-24 text-sm text-black rounded-full px-2 my-2 " + css.button} onClick={handleDeposit}>Deposit</button>
+
+                    {needsApproval ? (
+                        <button className={"shadow-md w-24 text-sm text-black rounded-full px-2 my-2 " + css.button} onClick={handleApprove}>Approve</button>
+                    ) : (
+                        <button className={"shadow-md w-24 text-sm text-black rounded-full px-2 my-2 " + css.button} onClick={handleDeposit}>Deposit</button>
+                    )}
                 </div>
                 <div className="flex flex-col">
                     <input className={"shadow-md w-24 text-sm rounded-full text-white p-1 bg-black " + css.input} placeholder={"Bal: " + farmBalance} value={withdrawAmount} onChange={event => setWithdrawAmount(event.target.value)} />
